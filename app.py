@@ -1,31 +1,31 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+import json
+import os
 from datetime import datetime, timedelta
-import numpy as np
 
 # Configure page
 st.set_page_config(
-    page_title="Restaurant Dashboard",
-    page_icon="🍽️",
+    page_title="Campus Café Pulse",
+    page_icon="☕",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# Custom CSS for coffee-themed styling
 st.markdown("""
 <style>
     .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
         padding: 1.5rem;
         border-radius: 10px;
         margin-bottom: 2rem;
         color: white;
     }
     
-    .restaurant-card {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    .cafe-card {
+        background: linear-gradient(135deg, #A0522D 0%, #CD853F 100%);
         padding: 1rem;
         border-radius: 8px;
         margin: 0.5rem 0;
@@ -37,303 +37,300 @@ st.markdown("""
         padding: 1rem;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-left: 4px solid #667eea;
+        border-left: 4px solid #8B4513;
     }
     
-    .coffee-theme {
-        background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+    .feedback-card {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #D2691E;
+        margin: 0.5rem 0;
     }
     
-    .embers-theme {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    .menu-item {
+        background: #fff;
+        padding: 0.8rem;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+        border: 1px solid #e9ecef;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # Sample data
 @st.cache_data
-def load_restaurant_data():
+def load_cafe_data():
     return {
-        "rise": {
-            "name": "Rise - Ready to serve",
-            "subtitle": "Inventory & Suggestions System",
+        "cafe_a": {
+            "name": "Café A",
+            "subtitle": "Campus Coffee Hub",
             "inventory": [
-                {"name": "Espresso", "stock": 45, "max_stock": 60, "category": "drink", "available": True},
-                {"name": "Croissant", "stock": 12, "max_stock": 50, "category": "pastry", "available": True},
-                {"name": "Sandwich", "stock": 8, "max_stock": 40, "category": "meal", "available": False},
-                {"name": "Cookies", "stock": 25, "max_stock": 80, "category": "snack", "available": True},
+                {"name": "Espresso", "stock": 50, "max_stock": 70, "category": "drink", "available": True, "price": 2.5},
+                {"name": "Croissant", "stock": 15, "max_stock": 50, "category": "pastry", "available": True, "price": 3.0},
+                {"name": "Bagel", "stock": 10, "max_stock": 40, "category": "meal", "available": False, "price": 4.0},
+                {"name": "Muffin", "stock": 20, "max_stock": 60, "category": "snack", "available": True, "price": 2.8},
             ],
             "top_selling": [
-                {"name": "Latte", "sales": 156},
-                {"name": "Sandwich", "sales": 98},
-                {"name": "Cookies", "sales": 87},
-                {"name": "Espresso", "sales": 76},
-                {"name": "Muffin", "sales": 54}
+                {"name": "Latte", "sales": 120},
+                {"name": "Croissant", "sales": 85},
+                {"name": "Muffin", "sales": 70},
+                {"name": "Espresso", "sales": 60},
             ],
-            "daily_revenue": [4200, 3850, 4650, 5200, 4850, 5800, 4450],
+            "daily_revenue": [3500, 4000, 4200, 3800, 4500, 5000, 4100],
             "top_items": [
-                {"name": "Caramel Latte", "rating": 4.8, "sales": 89, "badge": "Most Popular"},
-                {"name": "Club Sandwich", "rating": 4.6, "sales": 67, "badge": "Staff Pick"},
-                {"name": "Chocolate Cookies", "rating": 4.5, "sales": 45, "badge": "Best Value"}
-            ],
-            "rated_items": [
-                {"name": "Cappuccino", "rating": 4.7, "reviews": 23, "comment": "Perfect foam and great taste!", "date": "2 days ago"},
-                {"name": "Panini", "rating": 4.3, "reviews": 15, "comment": "Fresh ingredients and crispy bread.", "date": "1 week ago"}
+                {"name": "Caramel Latte", "rating": 4.7, "sales": 80, "badge": "Student Favorite"},
+                {"name": "Blueberry Muffin", "rating": 4.5, "sales": 50, "badge": "Best Seller"},
             ]
         },
-        "embers": {
-            "name": "Blu Embers",
-            "subtitle": "Woxsen University Restaurant",
+        "cafe_b": {
+            "name": "Café B",
+            "subtitle": "Campus Coffee Corner",
             "inventory": [
-                {"name": "Biryani", "stock": 25, "max_stock": 40, "category": "meal", "available": True},
-                {"name": "Masala Chai", "stock": 60, "max_stock": 80, "category": "drink", "available": True},
-                {"name": "Samosa", "stock": 15, "max_stock": 50, "category": "snack", "available": True},
-                {"name": "Gulab Jamun", "stock": 8, "max_stock": 30, "category": "dessert", "available": False},
+                {"name": "Cappuccino", "stock": 40, "max_stock": 60, "category": "drink", "available": True, "price": 2.7},
+                {"name": "Scone", "stock": 12, "max_stock": 40, "category": "pastry", "available": True, "price": 2.5},
+                {"name": "Sandwich", "stock": 8, "max_stock": 30, "category": "meal", "available": False, "price": 4.5},
+                {"name": "Cookie", "stock": 25, "max_stock": 50, "category": "snack", "available": True, "price": 2.0},
             ],
             "top_selling": [
-                {"name": "Biryani", "sales": 234},
-                {"name": "Dal Rice", "sales": 187},
-                {"name": "Samosa", "sales": 165},
-                {"name": "Chai", "sales": 143},
-                {"name": "Paratha", "sales": 98}
+                {"name": "Cappuccino", "sales": 150},
+                {"name": "Sandwich", "sales": 100},
+                {"name": "Cookie", "sales": 90},
+                {"name": "Scone", "sales": 70},
             ],
-            "daily_revenue": [8200, 7850, 9150, 10200, 9850, 11800, 8950],
+            "daily_revenue": [4000, 4500, 4800, 4200, 5000, 5500, 4300],
             "top_items": [
-                {"name": "Chicken Biryani", "rating": 4.9, "sales": 156, "badge": "Chef's Special"},
-                {"name": "Butter Chicken", "rating": 4.7, "sales": 98, "badge": "Most Popular"},
-                {"name": "Masala Dosa", "rating": 4.6, "sales": 87, "badge": "Traditional"}
-            ],
-            "rated_items": [
-                {"name": "Hyderabadi Biryani", "rating": 4.8, "reviews": 45, "comment": "Authentic taste and perfect spices!", "date": "1 day ago"},
-                {"name": "Paneer Curry", "rating": 4.4, "reviews": 28, "comment": "Rich and creamy, loved it!", "date": "3 days ago"}
+                {"name": "Vanilla Cappuccino", "rating": 4.9, "sales": 100, "badge": "Top Pick"},
+                {"name": "Chocolate Cookie", "rating": 4.6, "sales": 60, "badge": "Sweet Deal"},
             ]
         }
     }
 
+# Load or initialize feedback data
+FEEDBACK_FILE = "feedback.json"
+
+def load_feedback():
+    if os.path.exists(FEEDBACK_FILE):
+        with open(FEEDBACK_FILE, 'r') as f:
+            return json.load(f)
+    return {"cafe_a": [], "cafe_b": []}
+
+def save_feedback(feedback_data):
+    with open(FEEDBACK_FILE, 'w') as f:
+        json.dump(feedback_data, f, indent=2)
+
+feedback_data = load_feedback()
+
 # Initialize session state
-if 'restaurant' not in st.session_state:
-    st.session_state.restaurant = 'rise'
+if 'cafe' not in st.session_state:
+    st.session_state.cafe = 'cafe_a'
 if 'view' not in st.session_state:
-    st.session_state.view = 'admin'
+    st.session_state.view = 'student'
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'user_role' not in st.session_state:
+    st.session_state.user_role = 'student'
 
-# Load data
-data = load_restaurant_data()
-current_restaurant = data[st.session_state.restaurant]
-
-# Header
-st.markdown(f"""
-<div class="main-header">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h1>🍽️ {current_restaurant['name']}</h1>
-            <p style="margin: 0; opacity: 0.9;">{current_restaurant['subtitle']}</p>
-        </div>
-        <div style="font-size: 3rem; opacity: 0.3;">
-            {'☕' if st.session_state.restaurant == 'rise' else '🍽️'}
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Control buttons
-col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
-
-with col1:
-    if st.button("☕ Rise", key="rise_btn", use_container_width=True):
-        st.session_state.restaurant = 'rise'
-        st.rerun()
-
-with col2:
-    if st.button("🍽️ Blu Embers", key="embers_btn", use_container_width=True):
-        st.session_state.restaurant = 'embers'
-        st.rerun()
-
-with col3:
-    if st.button("🛠️ Admin View", key="admin_btn", use_container_width=True):
-        st.session_state.view = 'admin'
-        st.rerun()
-
-with col4:
-    if st.button("👥 Student View", key="student_btn", use_container_width=True):
-        st.session_state.view = 'student'
-        st.rerun()
-
-st.markdown("---")
-
-# Admin Dashboard
-if st.session_state.view == 'admin':
-    st.header("🛠️ Admin Dashboard")
-    
-    # Inventory Overview
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.subheader("📦 Inventory Overview")
-        inventory_df = pd.DataFrame(current_restaurant['inventory'])
-        
-        for _, item in inventory_df.iterrows():
-            stock_percentage = (item['stock'] / item['max_stock']) * 100
-            color = "🟢" if stock_percentage > 50 else "🟡" if stock_percentage > 20 else "🔴"
-            status = "✅" if item['available'] else "❌"
-            
-            st.markdown(f"""
-            <div style="background: white; padding: 1rem; margin: 0.5rem 0; border-radius: 8px; border-left: 4px solid {'#28a745' if item['available'] else '#dc3545'};">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong>{item['name']}</strong> {status}
-                        <br><small>{item['category'].title()}</small>
-                    </div>
-                    <div>
-                        {color} {item['stock']}/{item['max_stock']}
-                        <br><small>{stock_percentage:.0f}%</small>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col2:
-        st.subheader("📊 Sales Analytics")
-        
-        # Top Selling Items Chart
-        selling_df = pd.DataFrame(current_restaurant['top_selling'])
-        fig_bar = px.bar(
-            selling_df, 
-            x='name', 
-            y='sales',
-            title="Top 5 Selling Items",
-            color_discrete_sequence=['#667eea']
-        )
-        fig_bar.update_layout(height=300)
-        st.plotly_chart(fig_bar, use_container_width=True)
-    
-    # Daily Revenue Chart
-    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    revenue_df = pd.DataFrame({
-        'Day': days,
-        'Revenue': current_restaurant['daily_revenue']
-    })
-    
-    fig_line = px.line(
-        revenue_df, 
-        x='Day', 
-        y='Revenue',
-        title="Weekly Revenue Trend (₹)",
-        color_discrete_sequence=['#28a745']
-    )
-    fig_line.update_traces(line=dict(width=3), marker=dict(size=8))
-    fig_line.update_layout(height=300)
-    st.plotly_chart(fig_line, use_container_width=True)
-    
-    # Ratings Panel
-    st.subheader("⭐ Item Ratings & Reviews")
-    for item in current_restaurant['rated_items']:
-        stars = "⭐" * int(item['rating']) + "☆" * (5 - int(item['rating']))
-        st.markdown(f"""
-        <div style="background: white; padding: 1rem; margin: 0.5rem 0; border-radius: 8px; border-left: 4px solid #ffc107;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <strong>{item['name']}</strong>
-                <span style="background: #f8f9fa; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
-                    {item['reviews']} reviews
-                </span>
-            </div>
-            <div style="margin: 0.5rem 0;">
-                {stars} <strong>{item['rating']}</strong>
-            </div>
-            <div style="background: #f8f9fa; padding: 0.5rem; border-radius: 4px; border-left: 3px solid #17a2b8;">
-                💬 "{item['comment']}"
-                <br><small style="color: #6c757d;">{item['date']}</small>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-# Student Dashboard
+# Simulated login
+if not st.session_state.logged_in:
+    st.markdown("<h2>Login to Campus Café Pulse</h2>", unsafe_allow_html=True)
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        role = st.selectbox("Role", ["Student", "Admin"])
+        if st.form_submit_button("Login"):
+            if username:
+                st.session_state.logged_in = True
+                st.session_state.user_role = role.lower()
+                st.success(f"Logged in as {username} ({role})")
+                st.rerun()
+            else:
+                st.error("Please enter a username.")
 else:
-    st.header("👥 Student Dashboard")
-    
-    # Welcome Section
+    # Header
     st.markdown(f"""
-    <div class="restaurant-card">
-        <h2>Welcome to {current_restaurant['name']}!</h2>
-        <p>Help us improve by suggesting new items and rating your favorites.</p>
+    <div class="main-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>☕ Campus Café Pulse</h1>
+                <p style="margin: 0; opacity: 0.9;">{data[st.session_state.cafe]['name']} - {data[st.session_state.cafe]['subtitle']}</p>
+            </div>
+            <div style="font-size: 3rem; opacity: 0.3;">☕</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    col1, col2 = st.columns([1, 1])
-    
+
+    # Control buttons
+    col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 2])
     with col1:
-        # Suggestion Form
-        st.subheader("➕ Suggest a New Item")
-        with st.form("suggestion_form"):
-            item_name = st.text_input("Item Name", placeholder="e.g., Matcha Latte")
-            category = st.selectbox("Category", ["drink", "snack", "meal", "dessert"])
-            description = st.text_area("Description", placeholder="Describe the item and why it would be a great addition...")
-            
-            if st.form_submit_button("Submit Suggestion", use_container_width=True):
-                if item_name and category and description:
-                    st.success(f"Thank you for suggesting '{item_name}'! We'll review it soon.")
-                else:
-                    st.error("Please fill in all fields before submitting.")
-        
-        # Item Rating
-        st.subheader("⭐ Rate Items")
-        with st.form("rating_form"):
-            available_items = [item['name'] for item in current_restaurant['inventory'] if item['available']]
-            selected_item = st.selectbox("Select Item to Rate", available_items)
-            rating = st.slider("Rating", 1, 5, 3)
-            comment = st.text_area("Comment (optional)", placeholder="Share your experience...")
-            
-            if st.form_submit_button("Submit Rating", use_container_width=True):
-                st.success(f"Thank you for rating {selected_item}! Rating: {rating} stars")
-    
+        if st.button("☕ Café A", key="cafe_a_btn", use_container_width=True):
+            st.session_state.cafe = 'cafe_a'
+            st.rerun()
     with col2:
-        # Top Items
-        st.subheader("🏆 Top Items")
-        for item in current_restaurant['top_items']:
-            stars = "⭐" * int(item['rating']) + "☆" * (5 - int(item['rating']))
-            st.markdown(f"""
-            <div style="background: white; padding: 1rem; margin: 0.5rem 0; border-radius: 8px; border: 1px solid #e9ecef;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <strong>{item['name']}</strong>
-                    <span style="background: #28a745; color: white; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
-                        {item['badge']}
-                    </span>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>{stars} {item['rating']}</div>
-                    <div style="color: #6c757d; font-size: 0.9rem;">📈 {item['sales']} sold this week</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+        if st.button("☕ Café B", key="cafe_b_btn", use_container_width=True):
+            st.session_state.cafe = 'cafe_b'
+            st.rerun()
+    with col3:
+        if st.session_state.user_role == 'admin' and st.button("🛠️ Admin View", key="admin_btn", use_container_width=True):
+            st.session_state.view = 'admin'
+            st.rerun()
+    with col4:
+        if st.button("👩‍🎓 Student View", key="student_btn", use_container_width=True):
+            st.session_state.view = 'student'
+            st.rerun()
+    with col5:
+        if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
+            st.session_state.logged_in = False
+            st.session_state.user_role = 'student'
+            st.rerun()
+
+    st.markdown("---")
+
+    # Load data
+    current_cafe = data[st.session_state.cafe]
+
+    # Admin Dashboard
+    if st.session_state.view == 'admin' and st.session_state.user_role == 'admin':
+        st.header("🛠️ Admin Dashboard")
         
-        # Quick Stats
-        st.subheader("📊 Your Impact")
-        st.markdown("""
-        <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">
-            <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;">
-                <span>Suggestions Submitted</span>
-                <span style="background: #6c757d; color: white; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">12</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;">
-                <span>Items Rated</span>
-                <span style="background: #6c757d; color: white; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">28</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;">
-                <span>Suggestions Approved</span>
-                <span style="background: #28a745; color: white; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">3</span>
-            </div>
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.subheader("📦 Inventory Overview")
+            inventory_df = pd.DataFrame(current_cafe['inventory'])
+            for _, item in inventory_df.iterrows():
+                stock_percentage = (item['stock'] / item['max_stock']) * 100
+                color = "🟢" if stock_percentage > 50 else "🟡" if stock_percentage > 20 else "🔴"
+                status = "✅" if item['available'] else "❌"
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>{item['name']}</strong> {status}
+                            <br><small>{item['category'].title()} - ${item['price']:.2f}</small>
+                        </div>
+                        <div>
+                            {color} {item['stock']}/{item['max_stock']}
+                            <br><small>{stock_percentage:.0f}%</small>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col2:
+            st.subheader("📊 Feedback Analytics")
+            feedback_df = pd.DataFrame(feedback_data[st.session_state.cafe])
+            if not feedback_df.empty:
+                avg_rating = feedback_df['rating'].mean()
+                st.markdown(f"""
+                <div class="metric-card">
+                    <strong>Average Rating:</strong> {avg_rating:.1f} ⭐
+                    <br><strong>Total Feedback:</strong> {len(feedback_df)}
+                    <br><strong>Feedback Trend:</strong>
+                </div>
+                """, unsafe_allow_html=True)
+                feedback_df['date'] = pd.to_datetime(feedback_df['date'])
+                trend_df = feedback_df.groupby(feedback_df['date'].dt.date)['rating'].mean().reset_index()
+                fig_trend = px.line(trend_df, x='date', y='rating', title="Feedback Rating Trend")
+                fig_trend.update_layout(height=300, yaxis_range=[1, 5])
+                st.plotly_chart(fig_trend, use_container_width=True)
+            else:
+                st.write("No feedback available.")
+        
+        st.subheader("📈 Sales Overview")
+        revenue_df = pd.DataFrame({
+            'Day': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            'Revenue': current_cafe['daily_revenue']
+        })
+        fig_line = px.line(revenue_df, x='Day', y='Revenue', title="Weekly Revenue Trend ($)")
+        fig_line.update_traces(line=dict(width=3), marker=dict(size=8))
+        fig_line.update_layout(height=300)
+        st.plotly_chart(fig_line, use_container_width=True)
+
+    # Student Dashboard
+    else:
+        st.header("👩‍🎓 Student Dashboard")
+        
+        st.markdown(f"""
+        <div class="cafe-card">
+            <h2>Welcome to {current_cafe['name']}!</h2>
+            <p>Your feedback shapes our café! Share your thoughts and explore our menu.</p>
         </div>
         """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.subheader("📝 Submit Feedback")
+            with st.form("feedback_form"):
+                item_name = st.selectbox("Select Item", [item['name'] for item in current_cafe['inventory'] if item['available']])
+                rating = st.slider("Rating (1-5)", 1, 5, 3)
+                comment = st.text_area("Comment", placeholder="Share your experience...")
+                submit_button = st.form_submit_button("Submit Feedback")
+                if submit_button:
+                    if item_name and comment:
+                        feedback = {
+                            "name": item_name,
+                            "rating": rating,
+                            "comment": comment,
+                            "date": datetime.now().strftime("%Y-%m-%d")
+                        }
+                        feedback_data[st.session_state.cafe].append(feedback)
+                        save_feedback(feedback_data)
+                        st.success(f"Thank you for your feedback on {item_name}!")
+                    else:
+                        st.error("Please select an item and provide a comment.")
+            
+            st.subheader("➕ Suggest a Menu Item")
+            with st.form("suggestion_form"):
+                item_name = st.text_input("Item Name", placeholder="e.g., Iced Mocha")
+                category = st.selectbox("Category", ["drink", "pastry", "meal", "snack"])
+                description = st.text_area("Description", placeholder="Why should we add this item?")
+                if st.form_submit_button("Submit Suggestion"):
+                    if item_name and description:
+                        st.success(f"Thank you for suggesting '{item_name}'!")
+                    else:
+                        st.error("Please fill in all fields.")
+        
+        with col2:
+            st.subheader("📋 Menu Preview")
+            for item in current_cafe['inventory']:
+                status = "Available" if item['available'] else "Out of Stock"
+                st.markdown(f"""
+                <div class="menu-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>{item['name']}</strong>
+                            <br><small>{item['category'].title()} - ${item['price']:.2f}</small>
+                        </div>
+                        <div style="color: {'#28a745' if item['available'] else '#dc3545'};">
+                            {status}
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.subheader("📣 Recent Feedback")
+            for item in feedback_data[st.session_state.cafe][:5]:  # Limit to 5 for brevity
+                stars = "⭐" * int(item['rating']) + "☆" * (5 - int(item['rating']))
+                st.markdown(f"""
+                <div class="feedback-card">
+                    <strong>{item['name']}</strong>
+                    <div>{stars} {item['rating']}</div>
+                    <p>💬 "{item['comment']}"</p>
+                    <small style="color: #6c757d;">{item['date']}</small>
+                </div>
+                """, unsafe_allow_html=True)
 
-# Footer
-st.markdown("---")
-st.markdown("""
-<div style="text-align: center; color: #6c757d; padding: 1rem;">
-    <p>Restaurant Management Dashboard - Built with Streamlit</p>
-    <p><strong>Why these items are popular:</strong></p>
-    <ul style="list-style: none; padding: 0;">
-        <li>• High student ratings and positive feedback</li>
-        <li>• Consistent quality and taste</li>
-        <li>• Great value for money</li>
-    </ul>
-</div>
-""", unsafe_allow_html=True)
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; color: #6c757d; padding: 1rem;">
+        <p>Campus Café Pulse - Powered by Streamlit</p>
+        <p><strong>Why we value your feedback:</strong></p>
+        <ul style="list-style: none; padding: 0;">
+            <li>• Helps us improve our menu</li>
+            <li>• Ensures your favorite items stay in stock</li>
+            <li>• Creates a better café experience</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
