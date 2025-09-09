@@ -119,6 +119,8 @@ def save_feedback(feedback_data):
     with open(FEEDBACK_FILE, 'w') as f:
         json.dump(feedback_data, f, indent=2)
 
+# Load data and feedback at the start
+data = load_cafe_data()
 feedback_data = load_feedback()
 
 # Initialize session state
@@ -146,13 +148,16 @@ if not st.session_state.logged_in:
             else:
                 st.error("Please enter a username.")
 else:
+    # Ensure current_cafe is defined
+    current_cafe = data.get(st.session_state.cafe, data['cafe_a'])
+
     # Header
     st.markdown(f"""
     <div class="main-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <h1>☕ Campus Café Pulse</h1>
-                <p style="margin: 0; opacity: 0.9;">{data[st.session_state.cafe]['name']} - {data[st.session_state.cafe]['subtitle']}</p>
+                <p style="margin: 0; opacity: 0.9;">{current_cafe['name']} - {current_cafe['subtitle']}</p>
             </div>
             <div style="font-size: 3rem; opacity: 0.3;">☕</div>
         </div>
@@ -184,9 +189,6 @@ else:
             st.rerun()
 
     st.markdown("---")
-
-    # Load data
-    current_cafe = data[st.session_state.cafe]
 
     # Admin Dashboard
     if st.session_state.view == 'admin' and st.session_state.user_role == 'admin':
