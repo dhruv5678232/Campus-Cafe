@@ -49,11 +49,12 @@ st.markdown("""
     }
     
     .menu-item {
-        background: #fff;
+        background: white;
         padding: 0.8rem;
         border-radius: 8px;
         margin: 0.5rem 0;
         border: 1px solid #e9ecef;
+        color: black; /* Changed font color to black for readability */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -62,8 +63,8 @@ st.markdown("""
 @st.cache_data
 def load_cafe_data():
     return {
-        "cafe_a": {
-            "name": "Café A",
+        "rise_campus_cafe": {
+            "name": "Rise Campus Café",
             "subtitle": "Campus Coffee Hub",
             "inventory": [
                 {"name": "Espresso", "stock": 50, "max_stock": 70, "category": "drink", "available": True, "price": 2.5},
@@ -83,8 +84,8 @@ def load_cafe_data():
                 {"name": "Blueberry Muffin", "rating": 4.5, "sales": 50, "badge": "Best Seller"},
             ]
         },
-        "cafe_b": {
-            "name": "Café B",
+        "embers": {
+            "name": "Embers",
             "subtitle": "Campus Coffee Corner",
             "inventory": [
                 {"name": "Cappuccino", "stock": 40, "max_stock": 60, "category": "drink", "available": True, "price": 2.7},
@@ -113,7 +114,7 @@ def load_feedback():
     if os.path.exists(FEEDBACK_FILE):
         with open(FEEDBACK_FILE, 'r') as f:
             return json.load(f)
-    return {"cafe_a": [], "cafe_b": []}
+    return {"rise_campus_cafe": [], "embers": []}
 
 def save_feedback(feedback_data):
     with open(FEEDBACK_FILE, 'w') as f:
@@ -125,7 +126,7 @@ feedback_data = load_feedback()
 
 # Initialize session state
 if 'cafe' not in st.session_state:
-    st.session_state.cafe = 'cafe_a'
+    st.session_state.cafe = 'rise_campus_cafe'
 if 'view' not in st.session_state:
     st.session_state.view = 'student'
 if 'logged_in' not in st.session_state:
@@ -149,7 +150,7 @@ if not st.session_state.logged_in:
                 st.error("Please enter a username.")
 else:
     # Ensure current_cafe is defined
-    current_cafe = data.get(st.session_state.cafe, data['cafe_a'])
+    current_cafe = data.get(st.session_state.cafe, data['rise_campus_cafe'])
 
     # Header
     st.markdown(f"""
@@ -167,12 +168,12 @@ else:
     # Control buttons
     col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 2])
     with col1:
-        if st.button("☕ Café A", key="cafe_a_btn", use_container_width=True):
-            st.session_state.cafe = 'cafe_a'
+        if st.button("☕ Rise Campus Café", key="rise_campus_cafe_btn", use_container_width=True):
+            st.session_state.cafe = 'rise_campus_cafe'
             st.rerun()
     with col2:
-        if st.button("☕ Café B", key="cafe_b_btn", use_container_width=True):
-            st.session_state.cafe = 'cafe_b'
+        if st.button("☕ Embers", key="embers_btn", use_container_width=True):
+            st.session_state.cafe = 'embers'
             st.rerun()
     with col3:
         if st.session_state.user_role == 'admin' and st.button("🛠️ Admin View", key="admin_btn", use_container_width=True):
@@ -297,6 +298,7 @@ else:
             st.subheader("📋 Menu Preview")
             for item in current_cafe['inventory']:
                 status = "Available" if item['available'] else "Out of Stock"
+                status_color = "#28a745" if item['available'] else "#dc3545"
                 st.markdown(f"""
                 <div class="menu-item">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -304,7 +306,7 @@ else:
                             <strong>{item['name']}</strong>
                             <br><small>{item['category'].title()} - ${item['price']:.2f}</small>
                         </div>
-                        <div style="color: {'#28a745' if item['available'] else '#dc3545'};">
+                        <div style="color: {status_color};">
                             {status}
                         </div>
                     </div>
